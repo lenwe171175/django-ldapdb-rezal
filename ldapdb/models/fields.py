@@ -4,9 +4,13 @@
 
 import datetime
 import re
-
+import os
+import hashlib
+import base64
 from django.db.models import fields, lookups
 from django.utils import timezone
+from pytz import utc
+timezone.utc = utc
 
 
 class LdapLookup(lookups.Lookup):
@@ -395,3 +399,23 @@ TimestampField.register_lookup(ExactLookup)
 TimestampField.register_lookup(LteLookup)
 TimestampField.register_lookup(GteLookup)
 TimestampField.register_lookup(InLookup)
+
+class PasswordField(CharField):
+    """
+    Field which encodes password like slappasswd
+    """
+    def __init__(self, *args, **kwargs):
+        defaults = {'blank': True,
+                    'db_column': 'userPassword',
+                    'max_length': 128}
+        defaults.update(kwargs)
+        super(fields.CharField, self).__init__(*args, **defaults)
+
+    def get_db_prep_save(self, value, connection):
+        salt = os.urandom(4)
+        h = hashlib.sha1(str(value).encode(connection.charset))
+        h.update(salt)
+        return super(PasswordField, self).get_db_prep_save(
+            '{SSHA}' + base64.b64encode(h.digest() + salt).strip().decode(connection.charset),
+            connection
+        )
