@@ -404,12 +404,12 @@ class PasswordField(CharField):
     """
     Field which encodes password like slappasswd
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, db_collation=None, **kwargs):
         defaults = {'blank': True,
                     'db_column': 'userPassword',
                     'max_length': 128}
         defaults.update(kwargs)
-        super(fields.CharField, self).__init__(*args, **defaults)
+        super().__init__(*args, db_collation, **defaults)
 
     def get_db_prep_save(self, value, connection):
         salt = os.urandom(4)
